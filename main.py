@@ -19,7 +19,7 @@ app = FastAPI(title="Chatbot API")
 # Enable CORS for frontend and Flutter app access
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Update to specific domains in production, e.g., ["https://your-frontend.com"]
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
