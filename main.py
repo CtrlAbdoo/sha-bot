@@ -9,6 +9,7 @@ from docx import Document
 from pydantic import BaseModel
 import uuid
 
+
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
