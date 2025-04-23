@@ -2,6 +2,8 @@ import os
 import json
 import requests
 import logging
+import asyncio
+import aiohttp
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from PyPDF2 import PdfReader
@@ -19,7 +21,7 @@ app = FastAPI(title="Chatbot API")
 # Enable CORS for frontend and Flutter app access
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Update to specific domains in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -30,6 +32,9 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 if not OPENROUTER_API_KEY:
     logger.error("OPENROUTER_API_KEY environment variable not set")
     raise ValueError("OPENROUTER_API_KEY environment variable not set")
+
+# Retrieve Render URL from environment variable (set in Render dashboard)
+RENDER_URL = os.getenv("RENDER_URL", "http://localhost:8000")  # Fallback for local testing
 
 
 # Pydantic model for chat request
@@ -127,6 +132,28 @@ def send_message_to_model(messages):
     except requests.exceptions.RequestException as e:
         logger.error(f"Error communicating with the API: {e}")
         return "I'm sorry, I encountered an issue. Please try again later."
+
+
+# Keep-alive function to ping /health every 14 minutes
+async def keep_alive():
+    while True:
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"{RENDER_URL}/health") as response:
+                    if response.status == 200:
+                        logger.info("Keep-alive ping successful")
+                    else:
+                        logger.warning(f"Keep-alive ping failed with status {response.status}")
+        except Exception as e:
+            logger.error(f"Keep-alive ping error: {e}")
+        await asyncio.sleep(14 * 60)  # Sleep for 14 minutes
+
+
+# Start the keep-alive task when the app starts
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(keep_alive())
+    logger.info("Keep-alive task started")
 
 
 # Health check endpoint
