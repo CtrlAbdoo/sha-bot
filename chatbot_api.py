@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware  # Import CORS middleware
 from pydantic import BaseModel
 import os
 import aiohttp
@@ -6,7 +7,6 @@ import asyncio
 from docx import Document
 from pymongo import MongoClient
 from contextlib import asynccontextmanager
-
 
 # Lifespan handler for startup and shutdown
 @asynccontextmanager
@@ -21,9 +21,21 @@ async def lifespan(app: FastAPI):
         task.cancel()
         print("Keep-alive task stopped")
 
-
 # Initialize FastAPI app with lifespan handler
 app = FastAPI(lifespan=lifespan)
+
+# Add CORS middleware to allow requests from specific origins
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://127.0.0.1:5500",  # Allow your current local origin (VS Code Live Server)
+        "http://localhost:8000",  # Allow local testing with python -m http.server
+        "https://your-site-name.netlify.app"  # Replace with your Netlify URL after deployment
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # MongoDB Setup
 MONGO_URI = os.getenv("MONGO_URI",
@@ -35,7 +47,6 @@ collection = db["documents"]
 # OpenRouter API Setup
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 RENDER_URL = os.getenv("RENDER_URL", "https://sha-bot.onrender.com")
-
 
 # Load documents into MongoDB on startup
 def load_documents():
@@ -57,13 +68,11 @@ def load_documents():
             print(f"Error loading document {doc['id']}: {e}")
             raise
 
-
 # Fetch all document content from MongoDB
 def get_all_document_content():
     docs = collection.find()
     content = "\n\n".join([doc["content"] for doc in docs if "content" in doc])
     return content if content else "No document content available."
-
 
 # Extract relevant section from document content based on query
 def extract_relevant_section(content, query):
@@ -88,11 +97,6 @@ def extract_relevant_section(content, query):
             target_year = formal_year
             break
 
-    # If the query mentions a specific course (e.g., "الذكاء الاصطناعي"), look for that
-    course_name = None
-    if "الذكاء الاصطناعي" in query:
-        course_name = "الذكاء الاصطناعي"
-
     # Extract the relevant section
     for line in lines:
         line = line.strip()
@@ -101,11 +105,6 @@ def extract_relevant_section(content, query):
 
         # Start of a year section
         if target_year and target_year in line:
-            in_relevant_section = True
-            relevant_lines.append(line)
-            continue
-        # Start of a course section
-        elif course_name and course_name in line:
             in_relevant_section = True
             relevant_lines.append(line)
             continue
@@ -125,21 +124,17 @@ def extract_relevant_section(content, query):
 
     return "\n".join(relevant_lines)
 
-
 # Load documents on startup
 load_documents()
-
 
 # Health Check
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
 
-
 # Chat Request Model
 class ChatRequest(BaseModel):
     message: str
-
 
 # Chat Endpoint
 @app.post("/chat")
@@ -172,7 +167,6 @@ async def chat(request: ChatRequest):
                 return {"response": result["choices"][0]["message"]["content"]}
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
-
 
 # Keep-Alive Function
 async def keep_alive():
