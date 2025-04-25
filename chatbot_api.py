@@ -150,15 +150,16 @@ class ChatRequest(BaseModel):
 @app.post("/chat")
 async def chat(request: ChatRequest):
     document_content = get_all_document_content()
+    relevant_content = extract_relevant_section(document_content, request.message)
     messages = [
         {
             "role": "system",
             "content": (
-                "You are a college chatbot. Answer questions in Arabic, strictly using the following document content. "
-                "Do not use any external knowledge, general information, or creative elaboration. "
-                "Extract the answer directly from the document content without rephrasing or summarizing. "
-                "If the answer is not explicitly stated in the document, respond with 'المعلومات غير متوفرة في الوثيقة.'\n\n"
-                f"Document content:\n{document_content}"
+                "You are a college chatbot. Answer questions in Arabic using only the following document content. "
+                "Extract the answer directly from the document content without using external knowledge. "
+                "If the answer is not explicitly stated, try to infer it from the available content if possible, "
+                "otherwise respond with 'المعلومات غير متوفرة في الوثيقة.'\n\n"
+                f"Document content:\n{relevant_content}"
             )
         },
         {"role": "user", "content": request.message}
@@ -169,14 +170,19 @@ async def chat(request: ChatRequest):
             async with session.post(
                 "https://openrouter.ai/api/v1/chat/completions",
                 headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}", "Content-Type": "application/json"},
-                json={"model": "openai/gpt-3.5-turbo", "messages": messages}
+                json={"model": "meta-llama/llama-3.1-8b-instruct:free", "messages": messages}
             ) as response:
+                print(f"OpenRouter API response status: {response.status}")
+                response_text = await response.text()
+                print(f"OpenRouter API response body: {response_text}")
                 if response.status != 200:
-                    raise HTTPException(status_code=500, detail="Error communicating with the API")
+                    raise HTTPException(status_code=500, detail=f"Error communicating with OpenRouter API: {response_text}")
                 result = await response.json()
+                if "choices" not in result:
+                    raise HTTPException(status_code=500, detail=f"Unexpected OpenRouter response format: {response_text}")
                 return {"response": result["choices"][0]["message"]["content"]}
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(status_code=500, detail=f"Error in chat endpoint: {str(e)}")
 
 # Keep-Alive Function
 async def keep_alive():
