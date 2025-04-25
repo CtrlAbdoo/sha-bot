@@ -1,224 +1,118 @@
-import os
-import json
-import requests
-import logging
-import asyncio
-import aiohttp
-from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from PyPDF2 import PdfReader
-from docx import Document
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import uuid
+import os
+import aiohttp
+import asyncio
+from docx import Document
+from pymongo import MongoClient
+from contextlib import asynccontextmanager
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Lifespan handler for startup and shutdown
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Start the keep-alive task
+    task = asyncio.create_task(keep_alive())
+    print("Keep-alive task started")
+    try:
+        yield
+    finally:
+        # Shutdown: Cancel the keep-alive task
+        task.cancel()
+        print("Keep-alive task stopped")
 
-# Initialize FastAPI app
-app = FastAPI(title="Chatbot API")
+# Initialize FastAPI app with lifespan handler
+app = FastAPI(lifespan=lifespan)
 
-# Enable CORS for frontend and Flutter app access
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Update to specific domains in production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# MongoDB Setup
+MONGO_URI = os.getenv("MONGO_URI", "mongodb+srv://chatbot:VBEZlriNjETVEfUV@cluster0.yau1zmm.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+client = MongoClient(MONGO_URI)
+db = client["sha-bot"]
+collection = db["documents"]
 
-# Retrieve OpenRouter API key from environment variable
+# OpenRouter API Setup
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-if not OPENROUTER_API_KEY:
-    logger.error("OPENROUTER_API_KEY environment variable not set")
-    raise ValueError("OPENROUTER_API_KEY environment variable not set")
+RENDER_URL = os.getenv("RENDER_URL", "https://sha-bot.onrender.com")
 
-# Retrieve Render URL from environment variable (set in Render dashboard)
-RENDER_URL = os.getenv("RENDER_URL", "http://localhost:8000")  # Fallback for local testing
-
-
-# Pydantic model for chat request
-class ChatRequest(BaseModel):
-    message: str
-    conversation_id: str | None = None
-
-
-# Pydantic model for chat response
-class ChatResponse(BaseModel):
-    response: str
-    conversation_id: str
-
-
-# In-memory storage for conversation history (use a database in production)
-conversations = {}
-
-
-# Utility functions for extracting text from documents
-def extract_text_from_pdf(pdf_file):
-    try:
-        reader = PdfReader(pdf_file)
-        text = ""
-        for page in reader.pages:
-            text += page.extract_text() or ""
-        return text
-    except Exception as e:
-        logger.error(f"Error extracting text from PDF: {e}")
-        raise HTTPException(status_code=500, detail="Failed to extract text from PDF")
-
-
-def extract_text_from_docx(docx_file):
-    try:
-        doc = Document(docx_file)
-        text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
-        return text
-    except Exception as e:
-        logger.error(f"Error extracting text from DOCX: {e}")
-        raise HTTPException(status_code=500, detail="Failed to extract text from DOCX")
-
-
-# Function to summarize text using OpenRouter API
-def summarize_text(text, max_input_length=5000):
-    truncated_text = text[:max_input_length]
-    try:
-        response = requests.post(
-            url="https://openrouter.ai/api/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            data=json.dumps({
-                "model": "openai/gpt-3.5-turbo",
-                "messages": [
-                    {"role": "user",
-                     "content": f"Summarize the following text in 200 words or less:\n\n{truncated_text}"}
-                ],
-            }),
-            timeout=30
-        )
-        response.raise_for_status()
-        api_response = response.json()
-        if "choices" in api_response and len(api_response["choices"]) > 0:
-            return api_response["choices"][0]["message"]["content"]
-        else:
-            logger.warning(f"Unexpected API response format during summarization: {api_response}")
-            return "Summary not available."
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error summarizing text: {e}")
-        return "Summary not available."
-
-
-# Function to send messages to OpenRouter API
-def send_message_to_model(messages):
-    try:
-        response = requests.post(
-            url="https://openrouter.ai/api/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            data=json.dumps({
-                "model": "openai/gpt-3.5-turbo",
-                "messages": messages,
-            }),
-            timeout=30
-        )
-        response.raise_for_status()
-        api_response = response.json()
-        if "choices" in api_response and len(api_response["choices"]) > 0:
-            return api_response["choices"][0]["message"]["content"]
-        else:
-            logger.warning(f"Unexpected API response format: {api_response}")
-            return "I'm sorry, I encountered an issue. Please try again later."
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error communicating with the API: {e}")
-        return "I'm sorry, I encountered an issue. Please try again later."
-
-
-# Keep-alive function to ping /health every 14 minutes
-async def keep_alive():
-    while True:
+# Load documents into MongoDB on startup
+def load_documents():
+    documents = [
+        {"id": "doc1", "path": "test.docx"},
+        # Add more documents as needed, e.g., {"id": "doc2", "path": "another_doc.docx"}
+    ]
+    for doc in documents:
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(f"{RENDER_URL}/health") as response:
-                    if response.status == 200:
-                        logger.info("Keep-alive ping successful")
-                    else:
-                        logger.warning(f"Keep-alive ping failed with status {response.status}")
+            document = Document(doc["path"])
+            content = "\n".join([para.text for para in document.paragraphs])
+            collection.update_one(
+                {"_id": doc["id"]},
+                {"$set": {"content": content}},
+                upsert=True
+            )
+            print(f"Loaded document {doc['id']} into MongoDB")
         except Exception as e:
-            logger.error(f"Keep-alive ping error: {e}")
-        await asyncio.sleep(14 * 60)  # Sleep for 14 minutes
+            print(f"Error loading document {doc['id']}: {e}")
+            raise
 
+# Fetch all document content from MongoDB
+def get_all_document_content():
+    docs = collection.find()
+    content = "\n\n".join([doc["content"] for doc in docs if "content" in doc])
+    return content if content else "No document content available."
 
-# Start the keep-alive task when the app starts
-@app.on_event("startup")
-async def startup_event():
-    asyncio.create_task(keep_alive())
-    logger.info("Keep-alive task started")
+# Load documents on startup
+load_documents()
 
-
-# Health check endpoint
+# Health Check
 @app.get("/health")
-async def health_check():
+async def health():
     return {"status": "healthy"}
 
+# Chat Request Model
+class ChatRequest(BaseModel):
+    message: str
 
-# Endpoint to upload and summarize a document
-@app.post("/upload-document")
-async def upload_document(file: UploadFile = File(...)):
-    if not file.filename.lower().endswith((".pdf", ".docx")):
-        logger.warning(f"Unsupported file format: {file.filename}")
-        raise HTTPException(status_code=400, detail="Unsupported file format. Only PDF and DOCX are supported.")
-
-    try:
-        # Save file temporarily
-        temp_file_path = f"temp_{file.filename}"
-        with open(temp_file_path, "wb") as temp_file:
-            temp_file.write(await file.read())
-
-        # Extract text based on file type
-        if file.filename.lower().endswith(".pdf"):
-            text = extract_text_from_pdf(temp_file_path)
-        else:
-            text = extract_text_from_docx(temp_file_path)
-
-        # Summarize the document
-        summarized_content = summarize_text(text)
-
-        # Clean up temporary file
-        os.remove(temp_file_path)
-
-        # Store summarized content as system message in a new conversation
-        conversation_id = str(uuid.uuid4())
-        conversations[conversation_id] = [
-            {"role": "system", "content": f"Here is some context: {summarized_content}"}
-        ]
-
-        logger.info(f"Document uploaded and summarized, conversation_id: {conversation_id}")
-        return {"conversation_id": conversation_id, "summary": summarized_content}
-    except Exception as e:
-        logger.error(f"Error processing document: {e}")
-        raise HTTPException(status_code=500, detail=f"Error processing document: {str(e)}")
-
-
-# Endpoint to handle chat messages
-@app.post("/chat", response_model=ChatResponse)
+# Chat Endpoint
+@app.post("/chat")
 async def chat(request: ChatRequest):
-    conversation_id = request.conversation_id or str(uuid.uuid4())
+    document_content = get_all_document_content()
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are a college chatbot. Answer questions in Arabic, strictly using the following document content. "
+                "Do not use any external knowledge, general information, or creative elaboration. "
+                "Extract the answer directly from the document content without rephrasing or summarizing. "
+                "If the answer is not explicitly stated in the document, respond with 'المعلومات غير متوفرة في الوثيقة.'\n\n"
+                f"Document content:\n{document_content}"
+            )
+        },
+        {"role": "user", "content": request.message}
+    ]
 
-    if conversation_id not in conversations:
-        conversations[conversation_id] = []
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}", "Content-Type": "application/json"},
+                json={"model": "openai/gpt-3.5-turbo", "messages": messages}
+            ) as response:
+                if response.status != 200:
+                    raise HTTPException(status_code=500, detail="Error communicating with the API")
+                result = await response.json()
+                return {"response": result["choices"][0]["message"]["content"]}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
 
-    # Add user message to conversation history
-    conversations[conversation_id].append({"role": "user", "content": request.message})
-
-    # Limit conversation history to last 10 messages
-    conversations[conversation_id] = conversations[conversation_id][-10:]
-
-    # Get assistant response
-    assistant_response = send_message_to_model(conversations[conversation_id])
-
-    # Add assistant response to conversation history
-    conversations[conversation_id].append({"role": "assistant", "content": assistant_response})
-
-    logger.info(f"Chat message processed, conversation_id: {conversation_id}")
-    return ChatResponse(response=assistant_response, conversation_id=conversation_id)
+# Keep-Alive Function
+async def keep_alive():
+    async with aiohttp.ClientSession() as session:
+        while True:
+            try:
+                async with session.get(f"{RENDER_URL}/health") as response:
+                    if response.status == 200:
+                        print("Keep-alive ping successful")
+                    else:
+                        print(f"Keep-alive ping failed: {response.status}")
+            except Exception as e:
+                print(f"Keep-alive ping error: {e}")
+            await asyncio.sleep(14 * 60)  # Ping every 14 minutes
