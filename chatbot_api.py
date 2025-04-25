@@ -156,9 +156,8 @@ async def chat(request: ChatRequest):
             "role": "system",
             "content": (
                 "You are a college chatbot. Answer questions in Arabic using only the following document content. "
-                "Extract the answer directly from the document content without using external knowledge. "
-                "If the answer is not explicitly stated, try to infer it from the available content if possible, "
-                "otherwise respond with 'المعلومات غير متوفرة في الوثيقة.'\n\n"
+                "Extract the answer directly from the document content without rephrasing, summarizing, or using external knowledge. "
+                "If the answer is not explicitly stated in the document, respond with 'المعلومات غير متوفرة في الوثيقة.'\n\n"
                 f"Document content:\n{relevant_content}"
             )
         },
@@ -170,7 +169,11 @@ async def chat(request: ChatRequest):
             async with session.post(
                 "https://openrouter.ai/api/v1/chat/completions",
                 headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}", "Content-Type": "application/json"},
-                json={"model": "meta-llama/llama-3.1-8b-instruct:free", "messages": messages}
+                json={
+                    "model": "meta-llama/llama-3.1-8b-instruct:free",
+                    "messages": messages,
+                    "max_tokens": 100  # Limit response length to prevent gibberish
+                }
             ) as response:
                 print(f"OpenRouter API response status: {response.status}")
                 response_text = await response.text()
