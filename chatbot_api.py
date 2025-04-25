@@ -65,12 +65,6 @@ def get_all_document_content():
     return content if content else "No document content available."
 
 
-# Estimate token count (rough approximation: 1 word ≈ 1-2 tokens in Arabic)
-def estimate_tokens(text):
-    words = len(text.split())
-    return words * 1.5  # Approximate tokens in Arabic
-
-
 # Extract relevant section from document content based on query
 def extract_relevant_section(content, query):
     # Split content into lines
@@ -94,13 +88,13 @@ def extract_relevant_section(content, query):
             target_year = formal_year
             break
 
-    # Look for specific course (e.g., "الذكاء الاصطناعي")
+    # If the query mentions a specific course (e.g., "الذكاء الاصطناعي"), look for that
     course_name = None
     if "الذكاء الاصطناعي" in query:
         course_name = "الذكاء الاصطناعي"
 
     # Extract the relevant section
-    for i, line in enumerate(lines):
+    for line in lines:
         line = line.strip()
         if not line:
             continue
@@ -114,14 +108,8 @@ def extract_relevant_section(content, query):
         elif course_name and course_name in line:
             in_relevant_section = True
             relevant_lines.append(line)
-            # Include the next few lines (e.g., course details)
-            for j in range(i + 1, min(i + 5, len(lines))):  # Look ahead 5 lines
-                next_line = lines[j].strip()
-                if not next_line or any(year in next_line for year in year_keywords.values()):
-                    break
-                relevant_lines.append(next_line)
-            break  # Stop after finding the course
-        # End of a section
+            continue
+        # End of a section (empty line or next year section)
         elif in_relevant_section and any(year in line for year in year_keywords.values()):
             in_relevant_section = False
             continue
@@ -129,19 +117,13 @@ def extract_relevant_section(content, query):
         if in_relevant_section:
             relevant_lines.append(line)
 
-    # If no relevant section found, or section is too large, trim aggressively
-    extracted_content = "\n".join(relevant_lines)
-    if not extracted_content or estimate_tokens(extracted_content) > 6000:  # ~4000 words
-        # Trim to 2000 words (approx. 3000 tokens in Arabic)
-        words = content.split()[:2000]
-        extracted_content = " ".join(words)
+    # If no relevant section found, fall back to trimming the content
+    if not relevant_lines:
+        # Limit to first 3000 words (approx. 4500 tokens in Arabic)
+        words = content.split()[:3000]
+        return " ".join(words)
 
-    # Log the extracted content and token estimate
-    token_estimate = estimate_tokens(extracted_content)
-    print(f"Extracted content (first 100 chars): {extracted_content[:100]}...")
-    print(f"Estimated tokens for extracted content: {token_estimate}")
-
-    return extracted_content
+    return "\n".join(relevant_lines)
 
 
 # Load documents on startup
@@ -162,18 +144,14 @@ class ChatRequest(BaseModel):
 # Chat Endpoint
 @app.post("/chat")
 async def chat(request: ChatRequest):
-    # Get full document content
-    full_content = get_all_document_content()
-    # Extract relevant section based on the query
-    document_content = extract_relevant_section(full_content, request.message)
+    document_content = get_all_document_content()
     messages = [
         {
             "role": "system",
             "content": (
-                "Answer questions in Arabic, strictly using the following document content. "
+                "You are a college chatbot. Answer questions in Arabic, strictly using the following document content. "
                 "Do not use any external knowledge, general information, or creative elaboration. "
                 "Extract the answer directly from the document content without rephrasing or summarizing. "
-                "Be flexible with Arabic spelling variations (e.g., 'الرابعه' and 'الرابعة' are the same). "
                 "If the answer is not explicitly stated in the document, respond with 'المعلومات غير متوفرة في الوثيقة.'\n\n"
                 f"Document content:\n{document_content}"
             )
@@ -184,25 +162,15 @@ async def chat(request: ChatRequest):
     async with aiohttp.ClientSession() as session:
         try:
             async with session.post(
-                    "https://openrouter.ai/api/v1/chat/completions",
-                    headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}", "Content-Type": "application/json"},
-                    json={
-                        "model": "openai/gpt-3.5-turbo",
-                        "messages": messages,
-                        "max_tokens": 3000
-                    }
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}", "Content-Type": "application/json"},
+                json={"model": "openai/gpt-3.5-turbo", "messages": messages}
             ) as response:
                 if response.status != 200:
-                    error_text = await response.text()
-                    print(f"OpenRouter API error: Status {response.status}, Response: {error_text}")
-                    raise HTTPException(status_code=500, detail=f"Error communicating with the API: {error_text}")
+                    raise HTTPException(status_code=500, detail="Error communicating with the API")
                 result = await response.json()
-                print(f"OpenRouter API response: {result}")
-                if "choices" not in result:
-                    raise HTTPException(status_code=500, detail=f"Invalid API response: {result}")
                 return {"response": result["choices"][0]["message"]["content"]}
         except Exception as e:
-            print(f"Chat endpoint error: {str(e)}")
             raise HTTPException(status_code=500, detail=str(e))
 
 
