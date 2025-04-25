@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware  # Import CORS middleware
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
 import aiohttp
@@ -28,9 +28,9 @@ app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://127.0.0.1:5500",  # Allow your current local origin (VS Code Live Server)
-        "http://localhost:8000",  # Allow local testing with python -m http.server
-        "https://your-site-name.netlify.app"  # Replace with your Netlify URL after deployment
+        "http://127.0.0.1:5500",
+        "http://localhost:8000",
+        "https://your-site-name.netlify.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -52,7 +52,6 @@ RENDER_URL = os.getenv("RENDER_URL", "https://sha-bot.onrender.com")
 def load_documents():
     documents = [
         {"id": "doc1", "path": "test.docx"},
-        # Add more documents as needed, e.g., {"id": "doc2", "path": "another_doc.docx"}
     ]
     for doc in documents:
         try:
@@ -81,40 +80,51 @@ def extract_relevant_section(content, query):
     relevant_lines = []
     in_relevant_section = False
 
-    # Look for year or course-related keywords in the query
+    # Look for year or department-related keywords in the query
     year_keywords = {
         "الفرقة الاولى": "الفرقة الأولى",
         "الفرقة الثانيه": "الفرقة الثانية",
         "الفرقة الثالثه": "الفرقة الثالثة",
         "الفرقة الرابعه": "الفرقة الرابعة",
     }
+    department_keywords = ["قسم علم الحاسب", "علوم الحاسب", "قسم الحاسبات"]
     query_lower = query.lower()
 
-    # Find the relevant year section
+    # Find the relevant year and department
     target_year = None
+    target_department = None
     for keyword, formal_year in year_keywords.items():
-        if keyword in query_lower or formal_year in query_lower:
+        if keyword in query_lower or formal_year.lower() in query_lower:
             target_year = formal_year
+            break
+    for dept in department_keywords:
+        if dept in query_lower:
+            target_department = dept
             break
 
     # Extract the relevant section
     for line in lines:
         line = line.strip()
+        line_lower = line.lower()
         if not line:
             continue
 
-        # Start of a year section
-        if target_year and target_year in line:
+        # Start of a year or department section
+        if (target_year and target_year.lower() in line_lower) or (target_department and target_department.lower() in line_lower):
             in_relevant_section = True
             relevant_lines.append(line)
             continue
-        # End of a section (empty line or next year section)
-        elif in_relevant_section and any(year in line for year in year_keywords.values()):
+        # End of a section (next year section)
+        if in_relevant_section and any(year.lower() in line_lower for year in year_keywords.values()):
             in_relevant_section = False
             continue
 
         if in_relevant_section:
             relevant_lines.append(line)
+
+    # Log the extracted content for debugging
+    extracted_content = "\n".join(relevant_lines) if relevant_lines else "No relevant section found"
+    print(f"Extracted content for query '{query}':\n{extracted_content}")
 
     # If no relevant section found, fall back to trimming the content
     if not relevant_lines:
