@@ -90,13 +90,15 @@ def extract_relevant_section(content, query):
     department_keywords = ["قسم علم الحاسب", "علوم الحاسب", "قسم الحاسبات"]
     query_lower = query.lower()
 
-    # Find the relevant year and department
+    # Find the relevant year section
     target_year = None
-    target_department = None
     for keyword, formal_year in year_keywords.items():
-        if keyword in query_lower or formal_year.lower() in query_lower:
+        if keyword in query_lower or formal_year in query_lower:
             target_year = formal_year
             break
+
+    # Find the relevant department
+    target_department = None
     for dept in department_keywords:
         if dept in query_lower:
             target_department = dept
@@ -105,26 +107,26 @@ def extract_relevant_section(content, query):
     # Extract the relevant section
     for line in lines:
         line = line.strip()
-        line_lower = line.lower()
         if not line:
             continue
 
-        # Start of a year or department section
-        if (target_year and target_year.lower() in line_lower) or (target_department and target_department.lower() in line_lower):
+        # Start of a year section
+        if target_year and target_year in line:
             in_relevant_section = True
             relevant_lines.append(line)
             continue
-        # End of a section (next year section)
-        if in_relevant_section and any(year.lower() in line_lower for year in year_keywords.values()):
+        # Start of a department section
+        if target_department and target_department in line:
+            in_relevant_section = True
+            relevant_lines.append(line)
+            continue
+        # End of a section (empty line or next year section)
+        if in_relevant_section and any(year in line for year in year_keywords.values()):
             in_relevant_section = False
             continue
 
         if in_relevant_section:
             relevant_lines.append(line)
-
-    # Log the extracted content for debugging
-    extracted_content = "\n".join(relevant_lines) if relevant_lines else "No relevant section found"
-    print(f"Extracted content for query '{query}':\n{extracted_content}")
 
     # If no relevant section found, fall back to trimming the content
     if not relevant_lines:
@@ -150,15 +152,16 @@ class ChatRequest(BaseModel):
 @app.post("/chat")
 async def chat(request: ChatRequest):
     document_content = get_all_document_content()
+    relevant_content = extract_relevant_section(document_content, request.message)
     messages = [
         {
             "role": "system",
             "content": (
-                "You are a college chatbot. Answer questions in Arabic, strictly using the following document content. "
-                "Do not use any external knowledge, general information, or creative elaboration. "
-                "Extract the answer directly from the document content without rephrasing or summarizing. "
-                "If the answer is not explicitly stated in the document, respond with 'المعلومات غير متوفرة في الوثيقة.'\n\n"
-                f"Document content:\n{document_content}"
+                "You are a college chatbot. Answer questions in Arabic using only the following document content. "
+                "Extract the answer directly from the document content without using external knowledge. "
+                "If the answer is not explicitly stated, try to infer it from the available content if possible, "
+                "otherwise respond with 'المعلومات غير متوفرة في الوثيقة.'\n\n"
+                f"Document content:\n{relevant_content}"
             )
         },
         {"role": "user", "content": request.message}
