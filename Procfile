@@ -1,1 +1,1 @@
-web: uvicorn app.finetuned_api:app --host 0.0.0.0 $PORT 
+web: uvicorn app.finetuned_api:app --host 0.0.0.0 --port 8000
