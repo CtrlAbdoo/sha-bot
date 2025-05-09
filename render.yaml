@@ -2,8 +2,8 @@ services:
   - type: web
     name: sha-bot-api
     env: python
-    buildCommand: pip install -r requirements.txt && python scripts/prepare_render_deployment.py && chmod +x start.sh
-    startCommand: ./start.sh
+    buildCommand: pip install -r requirements.txt && python scripts/prepare_render_deployment.py
+    startCommand: python start.py
     envVars:
       - key: OPENROUTER_API_KEY
         sync: false
