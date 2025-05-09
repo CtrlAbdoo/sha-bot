@@ -1,1 +1,1 @@
-web: python start.py 
+web: python -c "import os; import subprocess; port = os.environ.get('PORT', '8000'); subprocess.run(['uvicorn', 'app.finetuned_api:app', '--host', '0.0.0.0', '--port', port])" 
