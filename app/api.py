@@ -20,7 +20,6 @@ from app.models import (
 )
 from app.openrouter_client import openrouter_client, OpenRouterError
 
-
 # Keep-alive background task
 async def keep_alive():
     """Background task to keep the server alive on platforms like Render by actively pinging the health endpoint"""
