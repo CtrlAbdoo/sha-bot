@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: sha-bot-api
+    env: python
+    buildCommand: pip install -r requirements.txt && python scripts/prepare_render_deployment.py
+    startCommand: python -m uvicorn app.finetuned_api:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: PORT
+        value: 8000
+      - key: PYTHONPATH
+        value: .
+      - key: LOG_LEVEL
+        value: INFO
+      - key: ALLOWED_ORIGINS
+        value: "*"
+    autoDeploy: true
+    disk:
+      name: sha-bot-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1 
