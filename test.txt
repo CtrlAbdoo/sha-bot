@@ -1,0 +1,19 @@
+level 1 - CS101 Introduction to Programming
+level 1 - CS102 Data Structures
+level 1 - BS101 Mathematics
+level 1 - H101 Human Rights
+    
+level 2 - CS201 OOP
+level 2 - CS202 Computer Networks
+level 2 - BS201 Statistics
+level 2 - H201 Work Ethics
+    
+level 3 - CS301 System Analysis
+level 3 - CS302 File Processing
+level 3 - BS301 Operation Research
+level 3 - H301 Business Administration
+    
+level 4 - CS401 Advanced Programming
+level 4 - CS402 Database Systems
+level 4 - BS401 Advanced Mathematics
+level 4 - H401 Professional Ethics 

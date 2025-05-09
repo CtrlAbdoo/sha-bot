@@ -1,0 +1,19 @@
+level 1 - EN101 English for Beginners
+level 1 - AR101 Arabic Language
+level 1 - IT101 Introduction to IT
+level 1 - PH101 Physics I
+    
+level 2 - EN201 Advanced English
+level 2 - AR201 Arabic Literature
+level 2 - IT201 Information Systems
+level 2 - PH201 Physics II
+    
+level 3 - EN301 Technical Writing
+level 3 - AR301 Arabic Research
+level 3 - IT301 Cybersecurity Basics
+level 3 - PH301 Applied Physics
+    
+level 4 - EN401 Business Communication
+level 4 - AR401 Advanced Arabic Studies
+level 4 - IT401 IT Project Management
+level 4 - PH401 Modern Physics 
