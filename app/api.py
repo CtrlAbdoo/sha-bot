@@ -69,15 +69,9 @@ app = FastAPI(
 )
 
 
-# Allow frontend URL (e.g. Netlify domain)
-origins = [
-    "https://your-site-name.netlify.app",
-    "http://localhost:3000",  # for local development (optional)
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,             # Only allow specific origins
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
