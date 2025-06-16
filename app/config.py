@@ -56,6 +56,7 @@ class Settings(BaseSettings):
             "http://localhost:8000",
             "http://localhost:8081",
            "https://sha-bot.netlify.app/"
+            "https://sha-bot.netlify.app"
             
         ]
     )
