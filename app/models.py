@@ -31,7 +31,7 @@ class ChatRequest(BaseModel):
         json_schema_extra = {
             "example": {
                 "message": "ما هي مواد الفرقة الثانية في قسم علم الحاسب؟",
-                "model": "gpt-3.5",
+                "model": "gpt-4.1-mini",
                 "max_tokens": 500,
                 "temperature": 0.7
             }
@@ -77,4 +77,4 @@ class ExportResponse(BaseModel):
     status: str = Field(..., description="Operation status")
     file: str = Field(..., description="Path to the exported file")
     message: str = Field(..., description="Operation message")
-    count: int = Field(..., description="Number of documents exported") 
+    count: int = Field(..., description="Number of documents exported")

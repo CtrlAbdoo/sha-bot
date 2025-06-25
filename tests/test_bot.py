@@ -12,7 +12,7 @@ def test_api(query, port=8000):
     
     payload = {
         "message": query,
-        "model": "gpt-3.5",
+        "model": "gpt-4.1-mini",
         "max_tokens": 500,
         "temperature": 0.7
     }
@@ -61,4 +61,4 @@ if __name__ == "__main__":
             success = test_api(query)
             if not success:
                 break
-            print("\n" + "=" * 80 + "\n") 
+            print("\n" + "=" * 80 + "\n")

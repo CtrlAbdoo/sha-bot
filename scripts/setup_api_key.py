@@ -106,15 +106,15 @@ def setup_other_config():
     print_header("Additional Configuration")
     
     # Ask about default model
-    default_model = os.getenv("DEFAULT_MODEL", "gpt-3.5")
+    default_model = os.getenv("DEFAULT_MODEL", "gpt-4.1-mini")
     print(f"\nCurrent default model: {default_model}")
-    print("Available models: gpt-3.5, gpt-4, claude-3, mixtral, qwen")
+    print("Available models: gpt-4.1-mini, gpt-4, claude-3, mixtral, qwen")
     
     change = input("Do you want to change the default model? (y/n): ").lower()
     if change == 'y':
         while True:
             new_model = input("Enter new default model: ").strip()
-            valid_models = ["gpt-3.5", "gpt-4", "claude-3", "mixtral", "qwen"]
+            valid_models = ["gpt-4.1-mini", "gpt-4", "claude-3", "mixtral", "qwen"]
             if new_model in valid_models:
                 set_key(".env", "DEFAULT_MODEL", new_model)
                 print_success(f"Default model set to: {new_model}")
@@ -144,7 +144,7 @@ def test_api_key():
     }
     
     payload = {
-        "model": "openai/gpt-3.5-turbo",
+        "model": "openai/gpt-4.1-mini",
         "messages": [
             {"role": "user", "content": "Hello, just a quick test."}
         ],
@@ -206,4 +206,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

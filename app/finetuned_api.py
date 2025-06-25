@@ -195,7 +195,7 @@ async def list_models():
     # Add the simulated fine-tuned model to the list
     model_info = {
         "fine-tuned-assistant": {
-            "id": "openai/gpt-3.5-turbo",  # Using gpt-3.5-turbo from OpenRouter
+            "id": "openai/gpt-4",  # Using gpt-4 from OpenRouter
             "context_length": 16000,
             "description": "Simulated fine-tuned model for all MongoDB content"
         }
@@ -254,12 +254,39 @@ async def chat(request: ChatRequest):
     
     try:
         # Call OpenRouter API
-        result = await openrouter_client.generate_completion(
-            messages=messages,
-            model_id=settings.available_models.get(request.model, settings.available_models[settings.default_model])["id"],
-            max_tokens=request.max_tokens,
-            temperature=request.temperature
-        )
+        # Determine which model to use, with proper fallback handling
+        try:
+            # First try to use the requested model
+            if request.model in settings.available_models:
+                model_config = settings.available_models[request.model]
+            # If that fails, try to use the default model
+            elif settings.default_model in settings.available_models:
+                model_config = settings.available_models[settings.default_model]
+            # If both fail, use gpt-3.5 as a last resort
+            else:
+                model_config = settings.available_models["gpt-3.5"]
+                
+            model_id = model_config["id"]
+            logger.info(f"Using model: {request.model} -> {model_id}")
+            
+            result = await openrouter_client.generate_completion(
+                messages=messages,
+                model_id=model_id,
+                max_tokens=request.max_tokens,
+                temperature=request.temperature
+            )
+        except Exception as e:
+            logger.error(f"Error selecting model: {e}")
+            # Fallback to a reliable model
+            model_id = settings.available_models["gpt-3.5"]["id"]
+            logger.info(f"Falling back to model: gpt-3.5 -> {model_id}")
+            
+            result = await openrouter_client.generate_completion(
+                messages=messages,
+                model_id=model_id,
+                max_tokens=request.max_tokens,
+                temperature=request.temperature
+            )
         
         # Extract the assistant's message
         if "choices" not in result or not result["choices"]:
@@ -302,4 +329,4 @@ async def chat(request: ChatRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail=f"Error processing request: {str(e)}"
-        ) 
+        )

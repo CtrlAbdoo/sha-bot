@@ -72,7 +72,7 @@ async def test_generate_completion():
         "id": "mock-id",
         "object": "chat.completion",
         "created": 1677858242,
-        "model": "openai/gpt-3.5-turbo",
+        "model": "openai/gpt-4.1-mini",
         "usage": {
             "prompt_tokens": 20,
             "completion_tokens": 10,
@@ -156,4 +156,4 @@ async def test_real_openrouter_status():
     """Test OpenRouter status with real API connection (requires API key)"""
     client = OpenRouterClient()
     result = await client.check_status()
-    assert result is True 
+    assert result is True

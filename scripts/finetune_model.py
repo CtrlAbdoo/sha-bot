@@ -206,8 +206,8 @@ async def use_openrouter_with_examples(examples_file):
     return SIMULATION_FILE_PATH
 
 def main():
-    parser = argparse.ArgumentParser(description="Fine-tune GPT-3.5-Turbo using ALL MongoDB data from Cluster0")
-    parser.add_argument("--model", default="openai/gpt-3.5-turbo", help="Model ID to use through OpenRouter")
+    parser = argparse.ArgumentParser(description="Fine-tune GPT-4.1-mini using ALL MongoDB data from Cluster0")
+    parser.add_argument("--model", default="openai/gpt-4.1-mini", help="Model ID to use through OpenRouter")
     args = parser.parse_args()
     
     # Step 1: Prepare training data from ALL MongoDB documents
@@ -234,10 +234,10 @@ def main():
        python -m uvicorn app.finetuned_api:app --host 0.0.0.0 --port 8000
     
     The API will use the lookup dictionary in {simulation_file} to respond to queries,
-    falling back to OpenRouter's GPT-3.5-Turbo when no match is found.
+    falling back to OpenRouter's GPT-4.1-mini when no match is found.
     
     This setup uses ALL data from MongoDB Cluster0, not just course information.
     """)
 
 if __name__ == "__main__":
-    main() 
+    main()

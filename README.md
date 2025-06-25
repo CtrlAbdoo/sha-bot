@@ -9,7 +9,7 @@ SHA-Bot is an intelligent chatbot that leverages OpenRouter's API and MongoDB da
 - 🔍 Simulated fine-tuning for faster, more accurate responses
 - 🌐 Multi-language support (Arabic and English)
 - 📚 Semantic matching to find relevant information
-- 🔄 Fallback to OpenRouter's GPT-3.5-Turbo for unfamiliar questions
+- 🔄 Fallback to OpenRouter's GPT-4.1-mini for unfamiliar questions
 - 📊 Basic token usage analytics
 - 🔌 Easy integration with web and mobile applications
 
@@ -204,4 +204,4 @@ MIT License
 
 - OpenRouter for providing access to multiple LLM models
 - FastAPI for the powerful API framework
-- MongoDB for document storage 
+- MongoDB for document storage

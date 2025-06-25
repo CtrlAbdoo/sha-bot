@@ -44,10 +44,10 @@ def test_list_models_endpoint():
     
     # Check if the models contain the expected fields
     models = response.json()["models"]
-    assert "gpt-3.5" in models
-    assert "id" in models["gpt-3.5"]
-    assert "context_length" in models["gpt-3.5"]
-    assert "description" in models["gpt-3.5"]
+    assert "gpt-4.1-mini" in models
+    assert "id" in models["gpt-4.1-mini"]
+    assert "context_length" in models["gpt-4.1-mini"]
+    assert "description" in models["gpt-4.1-mini"]
 
 
 def test_chat_endpoint_invalid_model():
@@ -136,4 +136,4 @@ def test_export_documents_endpoint():
         assert response.status_code == 200
         assert response.json()["status"] == "success"
         assert response.json()["file"] == "training_data.jsonl"
-        assert "Documents exported successfully" in response.json()["message"] 
+        assert "Documents exported successfully" in response.json()["message"]

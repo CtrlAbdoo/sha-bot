@@ -4,7 +4,7 @@ This document explains how to use the fine-tuning capability of SHA-Bot to creat
 
 ## What is Fine-Tuning?
 
-Fine-tuning is the process of training a pre-trained language model (like GPT-3.5) on your specific data to adapt it for a particular task. For SHA-Bot, we fine-tune the model on course information data, allowing it to:
+Fine-tuning is the process of training a pre-trained language model (like GPT-4.1-mini) on your specific data to adapt it for a particular task. For SHA-Bot, we fine-tune the model on course information data, allowing it to:
 
 1. Respond faster (no need to search through documents for each query)
 2. Provide more consistent answers
@@ -127,4 +127,4 @@ cd openai-finetune-bot
 2. Install dependencies:
 ```bash
 pip install -r requirements.txt
-``` 
+```

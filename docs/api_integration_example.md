@@ -62,7 +62,7 @@ sendMessage('ما هي مواد الفرقة الثانية في قسم علم �
 ```python
 import requests
 
-def send_message(message, model='gpt-3.5', max_tokens=500, temperature=0.7):
+def send_message(message, model='gpt-4.1-mini', max_tokens=500, temperature=0.7):
     """Send a message to the SHA-Bot API"""
     api_url = 'https://your-render-app.onrender.com/chat'
     
@@ -330,4 +330,4 @@ The response from the `/chat` endpoint will have this format:
 - `response`: The text response from the chatbot
 - `model`: The model used, including confidence score when using fine-tuned data
 - `tokens_used`: Number of tokens consumed by the request
-- `conversation_id`: Optional conversation ID for tracking (null if not provided) 
+- `conversation_id`: Optional conversation ID for tracking (null if not provided)

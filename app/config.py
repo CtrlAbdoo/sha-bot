@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     
     # Fine-tuned model settings
     finetuned_model_id: str = Field(
-        default="ft:gpt-3.5-turbo:sha-bot:course-assistant:latest",
+        default="ft:gpt-4.1-mini:sha-bot:course-assistant:latest",
         description="ID of the fine-tuned model. Update this after fine-tuning is complete."
     )
     use_finetuned_model: bool = Field(
@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     default_temperature: float = 0.7
     
     # Available models
-    default_model: str = "gpt-3.5"
+    default_model: str = "openai/gpt-4"
     
     # CORS settings
     allowed_origins: List[str] = Field(
@@ -73,29 +73,29 @@ class Settings(BaseSettings):
     available_models: Dict[str, Dict[str, Any]] = Field(
         default={
             "gpt-4": {
-                "id": "openai/gpt-4-turbo",
+                "id": "openai/gpt-4",
                 "context_length": 128000,
-                "description": "GPT-4 Turbo - Most powerful model for complex tasks"
+                "description": "GPT-4 - Powerful model for complex tasks"
             },
-            "claude-3": {
-                "id": "anthropic/claude-3-opus",
+            "claude-3-haiku": {
+                "id": "anthropic/claude-3-haiku",
                 "context_length": 100000,
-                "description": "Claude 3 Opus - Advanced reasoning capabilities"
+                "description": "Claude 3 Haiku - Fast and efficient reasoning"
             },
-            "mixtral": {
-                "id": "mistralai/mixtral-8x7b-instruct",
+            "claude-3-sonnet": {
+                "id": "anthropic/claude-3-sonnet",
+                "context_length": 100000,
+                "description": "Claude 3 Sonnet - Advanced reasoning capabilities"
+            },
+            "llama-3": {
+                "id": "meta-llama/llama-3-8b-instruct",
                 "context_length": 32000,
-                "description": "Mixtral 8x7B - Fast and capable open model"
-            },
-            "qwen": {
-                "id": "qwen/qwen-2-72b-instruct",
-                "context_length": 32768,
-                "description": "Qwen 2 72B - Advanced Chinese/English model"
+                "description": "Llama 3 - Fast and capable open model"
             },
             "gpt-3.5": {
-                "id": "openai/gpt-3.5-turbo",
+                "id": "openai/gpt-4",  # Fallback to GPT-4 since gpt-3.5-turbo wasn't available
                 "context_length": 16000,
-                "description": "GPT-3.5 Turbo - Fast and economical"
+                "description": "GPT-3.5 Turbo - Fast and economical (using GPT-4 as fallback)"
             }
         }
     )
@@ -145,4 +145,4 @@ logger.add(
 logger.info(f"Loaded API key: {settings.openrouter_api_key[:4]}...{settings.openrouter_api_key[-4:]} (length: {len(settings.openrouter_api_key)})")
 logger.info(f"Default model: {settings.default_model}")
 logger.info(f"Using fine-tuned model: {settings.use_finetuned_model}")
-logger.info(f"MongoDB URI: {settings.mongo_uri[:20]}...") 
+logger.info(f"MongoDB URI: {settings.mongo_uri[:20]}...")

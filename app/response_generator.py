@@ -130,7 +130,7 @@ class ResponseGenerator:
         return response
 
     @staticmethod
-    def generate_response(content: str, query: str, model: str = "gpt-3.5") -> Dict[str, Any]:
+    def generate_response(content: str, query: str, model: str = "gpt-4.1-mini") -> Dict[str, Any]:
         """
         Generate a response based on the content and query.
         
@@ -173,4 +173,4 @@ class ResponseGenerator:
         }
 
 # Global response generator instance
-response_generator = ResponseGenerator() 
+response_generator = ResponseGenerator()
